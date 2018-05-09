@@ -15,6 +15,10 @@ function preload() {
     game.load.image('doubleBall','assets/games/orbit/powerup_multiball.png');
     game.load.image('stickyPaddle','assets/games/orbit/powerup_s.png');
     game.load.audio('explode','assets/audio/SoundEffects/explosion.mp3');
+    game.load.audio('pickup','assets/audio/SoundEffects/pickup.wav');
+    game.load.audio('break','assets/audio/SoundEffects/shot2.wav');
+    game.load.audio('death','assets/audio/SoundEffects/player_death.wav');
+    game.load.audio('life','assets/audio/SoundEffects/p-ping.mp3');
 
 }
 
@@ -45,8 +49,12 @@ var explosions;
 
 var explodingBall;
 var poweredUp = false;
-var explodingBallTimer=0;
+
 var explosionSound;
+var pickupSound;
+var breakSound;
+var deathSound;
+var lifeSound;
 
 var doubleBall;
 var numBalls = 1;
@@ -305,16 +313,6 @@ function create() {
     var randomNumForTime = (Math.random() * 500) + 300;
     lifeTimer = time + randomNumForTime;
 
-    randomNumForTime = Math.random() * 600;
-    explodingBallTimer = time + randomNumForTime;
-
-    randomNumForTime = Math.random() * 600;
-    doubleBallTimer = time + randomNumForTime;
-
-    randomNumForTime = Math.random() * 600;
-    stickyPaddleTimer = time + randomNumForTime;
-
-
     lifeS = game.add.group();
     lifeS.enableBody = true;
     lifeS.physicsBodyType = Phaser.Physics.ARCADE;
@@ -343,7 +341,11 @@ function create() {
     explodingBalls.setAll('outOfBoundsKill', true);
     explodingBalls.setAll('checkWorldBounds', true);
     explosionSound = game.add.audio('explode');
-    explosionSound.play();
+    pickupSound = game.add.audio('pickup');
+    breakSound = game.add.audio('break');
+    deathSound = game.add.audio('death');
+    lifeSound = game.add.audio('life');
+
 
 
     explosions = game.add.group();
@@ -391,9 +393,7 @@ function create() {
 
 
 }
-function playSound() {
-    explosionSound.pause();
-}
+
 function dropPowerup() {
     var randomNum = Math.floor(Math.random() * 4);
     console.log(randomNum);
@@ -510,7 +510,7 @@ function update () {
     }
     if(Math.floor(lifeTimer) === Math.floor(time)){
         dropPowerup();
-        var randomNumForTime = (Math.random() * 500);
+        var randomNumForTime = (Math.random() * 500)+200;
         lifeTimer = time+randomNumForTime;
     }
     if(currLevel === 5 && Math.floor(fallingTimer) >=1000 && start === true) {
@@ -586,9 +586,9 @@ function update () {
 
 function releaseBall () {
     start = true;
-    stickiedUp = false;
     if (ballOnPaddle)
     {
+        stickiedUp = false;
         ballOnPaddle = false;
         ball.body.velocity.y = levelVelY;
         ball.body.velocity.x = levelVelX;
@@ -616,6 +616,7 @@ function clear(lifeS,explodingBalls,stickyPaddles, doubleBalls) {
 }
 function ballLost () {
     if (!doubledUp) {
+        deathSound.play();
         clear(lifeS, explodingBalls,stickyPaddles,doubleBalls);
         powerUpText.visible = false;
         lives--;
@@ -671,12 +672,13 @@ function explode(_object) {
     var explosion = explosions.getFirstExists(false);
     explosion.reset(_object.x,_object.y);
     explosion.play('kaboom', 30, false, true);
-    explosionSound.play('explode');
+    explosionSound.play();
 }
 function asteroidsHitPaddle(paddle,_asteroid){
     clear(lifeS,explodingBalls,stickyPaddles,doubleBalls);
     _asteroid.kill();
     explode(paddle);
+    explosionSound.play();
     ballLost();
 }
 function displayPoweredUp(){
@@ -684,6 +686,7 @@ function displayPoweredUp(){
 }
 
 function powerUpHitPaddle(paddle, _explodingBall){
+    pickupSound.play();
     score+=15;
     scoreText.text = 'score: ' + score;
     displayPoweredUp();
@@ -693,6 +696,7 @@ function powerUpHitPaddle(paddle, _explodingBall){
 
 }
 function doubleBallHitPaddle(paddle,_doubleBall){
+    pickupSound.play();
     if(doubledUp === false) {
         doubledUp = true;
         score += 15;
@@ -726,6 +730,7 @@ function doubleBallHitPaddle(paddle,_doubleBall){
 
 }
 function stickyPaddleHitPaddle(paddle, _stickyPaddle){
+    pickupSound.play();
     score+=15;
     scoreText.text = 'score: ' + score;
     displayPoweredUp();
@@ -759,6 +764,7 @@ function ballHitBrick (_ball, _brick) {
         }
     }
     else {
+        breakSound.play();
         _brick.kill();
         score += 10;
 
@@ -789,7 +795,6 @@ function ballHitBrick (_ball, _brick) {
             ball.y = paddle.y - 16;
             ball.animations.stop();
 
-            //  And bring the bricks back from the dead :)
             currLevel++;
             create();
         }
@@ -826,6 +831,7 @@ function ballHitPaddle (_ball, _paddle) {
 
 }
 function lifeHitPaddle(paddle,_life){
+    lifeSound.play();
     //_life.revive();
     lives++;
     livesText.text = 'lives: ' + lives;
